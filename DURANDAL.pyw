@@ -246,8 +246,10 @@ import json, datetime
 _update_lock = threading.Lock()
 
 PREFS_FILE            = TOOLS_DIR / "prefs.json"
-UPDATE_STAMP          = TOOLS_DIR / ".last_update_check"
-UPDATE_COOLDOWN_HOURS = 24
+UPDATE_STAMP           = TOOLS_DIR / ".last_update_check"
+RELEASE_STAMP          = TOOLS_DIR / ".last_release_check"
+UPDATE_COOLDOWN_HOURS  = 24
+GITHUB_REPO            = "Ceezay/Durandal"
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  USER PREFERENCES  (persisted to prefs.json next to the script)
@@ -387,6 +389,57 @@ def run_background_updates(on_done=None):
         if updated and on_done:
             on_done("🔄  Auto-updated:\n" + "\n".join(updated))
     threading.Thread(target=_worker, daemon=True).start()
+
+
+def check_for_new_release(on_update_found=None):
+    """
+    Check GitHub releases once per day. If a newer version tag exists,
+    call on_update_found(latest_version, release_url).
+    """
+    def _worker():
+        try:
+            # Only check once per day
+            if RELEASE_STAMP.exists():
+                data = json.loads(RELEASE_STAMP.read_text())
+                last = datetime.datetime.fromisoformat(data.get("last_check", "1970-01-01"))
+                if datetime.datetime.now() - last < datetime.timedelta(hours=24):
+                    return
+        except Exception:
+            pass
+
+        try:
+            import urllib.request as _ur
+            url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+            req = _ur.Request(url, headers={"User-Agent": "DURANDAL-updater"})
+            with _ur.urlopen(req, timeout=10) as resp:
+                data = json.loads(resp.read().decode())
+
+            # Record that we checked
+            TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+            RELEASE_STAMP.write_text(
+                json.dumps({"last_check": datetime.datetime.now().isoformat()}))
+
+            tag = data.get("tag_name", "").lstrip("v")
+            release_url = data.get("html_url", f"https://github.com/{GITHUB_REPO}/releases/latest")
+
+            if not tag:
+                return
+
+            # Compare versions (simple tuple comparison)
+            def _ver(s):
+                try:
+                    return tuple(int(x) for x in s.split("."))
+                except Exception:
+                    return (0,)
+
+            if _ver(tag) > _ver(VERSION):
+                if on_update_found:
+                    on_update_found(tag, release_url)
+        except Exception:
+            pass
+
+    threading.Thread(target=_worker, daemon=True).start()
+
 
 # ── Now safe to import GUI deps ───────────────────────────────────────────────
 # yt_dlp is intentionally NOT imported here — it takes ~1s to load and is only
@@ -4780,6 +4833,7 @@ class App(ctk.CTk):
 
         # ── Kick off background update check ──
         run_background_updates(on_done=self._show_update_notice)
+        check_for_new_release(on_update_found=self._on_new_release_found)
 
     def _centre_tab_labels(self):
         """Walk the CTkTabview's internal segmented button and centre every label."""
@@ -4827,6 +4881,46 @@ class App(ctk.CTk):
         self._update_bar.lift()
         self.after(12_000, self._update_bar.pack_forget)
 
+
+    def _on_new_release_found(self, latest_version: str, release_url: str):
+        """Called from background thread when a newer GitHub release exists."""
+        self.after(0, self._show_release_dialog, latest_version, release_url)
+
+    def _show_release_dialog(self, latest_version: str, release_url: str):
+        win = ctk.CTkToplevel(self)
+        win.title("Update Available")
+        win.geometry("380x220")
+        win.resizable(False, False)
+        win.transient(self)
+        win.grab_set()
+        self.update_idletasks()
+        x = self.winfo_x() + (self.winfo_width()  - 380) // 2
+        y = self.winfo_y() + (self.winfo_height() - 220) // 2
+        win.geometry(f"+{x}+{y}")
+
+        ctk.CTkLabel(win, text="🆕  Update Available",
+                     font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(22, 4))
+        ctk.CTkLabel(win,
+                     text=f"DURANDAL {latest_version} is out.\nYou're on v{VERSION}.",
+                     text_color="gray70", font=ctk.CTkFont(size=12),
+                     justify="center").pack(pady=(0, 18))
+
+        btn_row = ctk.CTkFrame(win, fg_color="transparent")
+        btn_row.pack()
+
+        def _open_release():
+            import webbrowser
+            webbrowser.open(release_url)
+            win.destroy()
+
+        ctk.CTkButton(btn_row, text="View Release", width=140, height=34,
+                      fg_color=ACCENT, hover_color=SP_HOVER,
+                      font=ctk.CTkFont(size=13),
+                      command=_open_release).pack(side="left", padx=(0, 10))
+        ctk.CTkButton(btn_row, text="Later", width=90, height=34,
+                      fg_color="gray30", hover_color="gray40",
+                      font=ctk.CTkFont(size=13),
+                      command=win.destroy).pack(side="left")
 
     def _show_credits(self):
         win = ctk.CTkToplevel(self)
@@ -4951,6 +5045,8 @@ class App(ctk.CTk):
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.freeze_support()
     try:
         App().mainloop()
     except Exception as _e:
