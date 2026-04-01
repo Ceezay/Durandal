@@ -1,3 +1,11 @@
+# ── Single-instance guard (must be first) ────────────────────────────────────
+import sys as _sys
+if _sys.platform == "win32":
+    import ctypes as _ctypes
+    _mutex = _ctypes.windll.kernel32.CreateMutexW(None, False, "DURANDAL_SingleInstance_Mutex")
+    if _ctypes.windll.kernel32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
+        _sys.exit(0)
+
 """
 DURANDAL — Setting up
 Self-contained: auto-installs Python deps and downloads FFmpeg on first launch.
@@ -235,21 +243,9 @@ def _needs_setup():
         except ImportError: return True
     return False
 
-if getattr(sys, "frozen", False):
-    # Running as a PyInstaller exe — dependencies are bundled, skip bootstrap
-    try:
-        _ffmpeg_path = _ensure_ffmpeg()
-        _setup_err   = None
-    except Exception as e:
-        _ffmpeg_path, _setup_err = None, str(e)
-elif _needs_setup():
-    _ffmpeg_path, _setup_err = _bootstrap_with_splash()
-else:
-    try:
-        _ffmpeg_path = _ensure_ffmpeg()
-        _setup_err   = None
-    except Exception as e:
-        _ffmpeg_path, _setup_err = None, str(e)
+# Defer all setup to __main__ to prevent PyInstaller re-entry loops
+_ffmpeg_path = None
+_setup_err   = None
 
 if _setup_err:
     _r = tk.Tk(); _r.withdraw()
