@@ -12,6 +12,24 @@ import tkinter as tk
 
 VERSION = "1.0.0"
 
+# When frozen by PyInstaller, sys.executable is the .exe itself.
+# Use this helper everywhere we need to invoke Python/pip.
+def _python_exe() -> str:
+    """Return the real Python interpreter, even when frozen."""
+    if getattr(sys, "frozen", False):
+        # Look for python.exe next to the exe, or fall back to sys.executable
+        candidate = Path(sys.executable).parent / "python.exe"
+        if candidate.exists():
+            return str(candidate)
+        # Try the embedded Python in the PyInstaller bundle
+        candidate2 = Path(sys._MEIPASS) / "python.exe"
+        if candidate2.exists():
+            return str(candidate2)
+        # Last resort — won't work for pip but avoids the loop
+        return sys.executable
+    return sys.executable
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  BOOTSTRAP
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,7 +58,7 @@ def _pip_install(pkg, imp=None):
         pass
     print(f"[setup] Installing {pkg}...")
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", pkg, "-q"],
+        [_python_exe(), "-m", "pip", "install", pkg, "-q"],
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
     )
 
@@ -318,7 +336,7 @@ def get_folder_history(pref_key: str) -> list:
 
 def _get_installed_version(pkg):
     try:
-        r = subprocess.run([sys.executable,"-m","pip","show",pkg],
+        r = subprocess.run([_python_exe(),"-m","pip","show",pkg],
                            capture_output=True, text=True, timeout=10)
         for line in r.stdout.splitlines():
             if line.startswith("Version:"):
@@ -331,7 +349,7 @@ def _pip_upgrade(pkg):
     """Upgrade pkg. Returns (old_ver, new_ver) if version changed, else (None,None)."""
     old = _get_installed_version(pkg)
     try:
-        subprocess.run([sys.executable,"-m","pip","install","--upgrade",pkg,"-q"],
+        subprocess.run([_python_exe(),"-m","pip","install","--upgrade",pkg,"-q"],
                        capture_output=True, timeout=60)
         new = _get_installed_version(pkg)
         if new and new != old:
@@ -378,7 +396,7 @@ def run_background_updates(on_done=None):
             old = _get_installed_version(pkg)
             try:
                 extra = ["--pre"] if (channel == "nightly" and pkg == "yt-dlp") else []
-                subprocess.run([sys.executable, "-m", "pip", "install",
+                subprocess.run([_python_exe(), "-m", "pip", "install",
                                 "--upgrade", pkg, "-q"] + extra,
                                capture_output=True, timeout=60)
                 new = _get_installed_version(pkg)
@@ -1473,7 +1491,7 @@ class SpotifyTab(ctk.CTkFrame, _Mixin):
             # --threads 1 serialises downloads to avoid hammering the Spotify API
             # --no-cache prevents stale token issues that can trigger false 429s
             cmd = [
-                sys.executable, "-m", "spotdl", url,
+                _python_exe(), "-m", "spotdl", url,
                 "--output",       save,
                 "--bitrate",      self.bitrate_var.get(),
                 "--format",       "mp3",
