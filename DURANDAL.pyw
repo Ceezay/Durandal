@@ -231,7 +231,14 @@ def _needs_setup():
         except ImportError: return True
     return False
 
-if _needs_setup():
+if getattr(sys, "frozen", False):
+    # Running as a PyInstaller exe — dependencies are bundled, skip bootstrap
+    try:
+        _ffmpeg_path = _ensure_ffmpeg()
+        _setup_err   = None
+    except Exception as e:
+        _ffmpeg_path, _setup_err = None, str(e)
+elif _needs_setup():
     _ffmpeg_path, _setup_err = _bootstrap_with_splash()
 else:
     try:
