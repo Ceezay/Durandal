@@ -1110,12 +1110,13 @@ class YouTubeTab(ctk.CTkFrame, _Mixin):
 
         # Template: playlists get their own subfolder, singles go flat
         if playlist:
-            tpl = os.path.join(save, "%(playlist_title)s", "%(playlist_index)s - %(title)s.%(ext)s")
+            tpl = str(Path(save) / "%(playlist_title)s" / "%(playlist_index)s - %(title)s.%(ext)s")
         else:
-            tpl = os.path.join(save, "%(title)s.%(ext)s")
+            tpl = str(Path(save) / "%(title)s.%(ext)s")
 
         opts = {
             "outtmpl":         tpl,
+            "windowsfilenames": True,
             "noplaylist":      not playlist,
             "progress_hooks":  [self._progress_hook],
             "quiet":           True,
@@ -1467,6 +1468,7 @@ class SpotifyTab(ctk.CTkFrame, _Mixin):
             opts = {
                 "format":          "bestaudio/best",
                 "outtmpl":         outtmpl,
+                "windowsfilenames": True,
                 "ffmpeg_location": str(_ffmpeg_path),
                 "quiet":           True,
                 "no_warnings":     True,
@@ -1810,6 +1812,7 @@ class XDownloaderSubTab(ctk.CTkFrame, _Mixin):
         opts = {
             "format":           q_map.get(q, "best"),
             "outtmpl":          self._get_outtmpl(save),
+            "windowsfilenames": True,
             "ffmpeg_location":  str(_ffmpeg_path),
             "merge_output_format": "mp4",
             "progress_hooks":   [self._progress_hook],
