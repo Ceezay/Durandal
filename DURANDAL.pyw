@@ -4239,6 +4239,39 @@ class SettingsPanel(ctk.CTkFrame):
                                      font=ctk.CTkFont(size=11))
         tenor_status.pack(side="left", padx=(8, 0))
 
+        # ── Desktop shortcut ──
+        scard = ctk.CTkFrame(B, corner_radius=8)
+        scard.pack(fill="x", padx=8, pady=(8, 4))
+
+        shdr = ctk.CTkFrame(scard, fg_color="transparent")
+        shdr.pack(fill="x", padx=14, pady=(12, 2))
+        ctk.CTkLabel(shdr, text="🖥  Desktop Shortcut",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(side="left")
+
+        ctk.CTkLabel(scard,
+                     text="Creates a shortcut on your Desktop pointing to this app.",
+                     text_color="gray50", font=ctk.CTkFont(size=10),
+                     wraplength=380, justify="left").pack(anchor="w", padx=14, pady=(0, 8))
+
+        sc_row = ctk.CTkFrame(scard, fg_color="transparent")
+        sc_row.pack(fill="x", padx=14, pady=(0, 12))
+
+        sc_status = ctk.CTkLabel(sc_row, text="", font=ctk.CTkFont(size=11))
+        sc_status.pack(side="right", padx=(8, 0))
+
+        def _do_shortcut():
+            ok, err = _create_desktop_shortcut()
+            if ok:
+                sc_status.configure(text="Shortcut created ✓", text_color="#a8d8a8")
+            else:
+                sc_status.configure(text=f"Failed: {err}", text_color="#f4a261")
+            sc_row.after(4000, lambda: sc_status.configure(text=""))
+
+        ctk.CTkButton(sc_row, text="Create Desktop Shortcut", width=200, height=30,
+                      fg_color=ACCENT, hover_color=SP_HOVER,
+                      font=ctk.CTkFont(size=12),
+                      command=_do_shortcut).pack(side="left")
+
         # ── TAB 3: Appearance ────────────────────────────────────────────────
         A = self._tabs.tab("🎨  Appearance")
 
@@ -4852,6 +4885,9 @@ class App(ctk.CTk):
         # ── Kick off background update check ──
         run_background_updates(on_done=self._show_update_notice)
         check_for_new_release(on_update_found=self._on_new_release_found)
+        # First launch — create desktop shortcut automatically
+        if not SHORTCUT_FLAG.exists():
+            threading.Thread(target=_create_desktop_shortcut, daemon=True).start()
 
     def _centre_tab_labels(self):
         """Walk the CTkTabview's internal segmented button and centre every label."""
