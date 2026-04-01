@@ -10,6 +10,8 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
+VERSION = "1.0.0"
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  BOOTSTRAP
 # ─────────────────────────────────────────────────────────────────────────────
@@ -264,6 +266,7 @@ _DEFAULT_PREFS = {
     # Behaviour
     "confirm_before_download": False,
     "clear_log_on_start":      False,
+    "tenor_api_key":           "",
     # Appearance
     # Updates
     "auto_update_enabled":     True,
@@ -3035,10 +3038,17 @@ class DiscordDownloaderSubTab(ctk.CTkFrame, _Mixin):
             if not m:
                 raise ValueError("Could not parse Tenor GIF ID from URL")
             gif_id = m.group(1)
-            # Tenor public API v2 — anonymous key works for lookups
+            # Tenor API v2 — requires your own key from tenor.com/developer
+            tenor_key = get_pref("tenor_api_key", "").strip()
+            if not tenor_key:
+                raise ValueError(
+                    "No Tenor API key set.\n\n"
+                    "Get a free key at tenor.com/developer, then add it in\n"
+                    "Settings → Behaviour → Tenor API Key."
+                )
             api_url = (
                 f"https://tenor.googleapis.com/v2/posts"
-                f"?ids={gif_id}&key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&limit=1"
+                f"?ids={gif_id}&key={tenor_key}&limit=1"
                 f"&media_filter=gif,mp4"
             )
             req = urllib.request.Request(api_url, headers={"User-Agent": "Mozilla/5.0"})
@@ -4121,6 +4131,43 @@ class SettingsPanel(ctk.CTkFrame):
                                    "Wipes the log box automatically when you start a new download.",
                                    "clear_log_on_start",       (4, 14))
 
+        # ── Tenor API key ──
+        tcard = ctk.CTkFrame(B, corner_radius=8)
+        tcard.pack(fill="x", padx=8, pady=(8, 4))
+
+        thdr = ctk.CTkFrame(tcard, fg_color="transparent")
+        thdr.pack(fill="x", padx=14, pady=(12, 2))
+        ctk.CTkLabel(thdr, text="🎞  Tenor API Key",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(side="left")
+
+        ctk.CTkLabel(tcard,
+                     text="Required for downloading GIFs from tenor.com links.\n"
+                          "Get a free key at tenor.com/developer (sign in with Google → Create App).",
+                     text_color="gray50", font=ctk.CTkFont(size=10),
+                     wraplength=380, justify="left").pack(anchor="w", padx=14, pady=(0, 6))
+
+        tenor_row = ctk.CTkFrame(tcard, fg_color="transparent")
+        tenor_row.pack(fill="x", padx=14, pady=(0, 12))
+
+        self._tenor_key_var = ctk.StringVar(value=get_pref("tenor_api_key") or "")
+        tenor_entry = ctk.CTkEntry(tenor_row, textvariable=self._tenor_key_var,
+                                    placeholder_text="Paste your Tenor API key here…",
+                                    width=340, show="*")
+        tenor_entry.pack(side="left", padx=(0, 8))
+
+        def _save_tenor_key():
+            set_pref("tenor_api_key", self._tenor_key_var.get().strip())
+            tenor_status.configure(text="Saved ✓", text_color="#a8d8a8")
+            tenor_entry.after(2000, lambda: tenor_status.configure(text=""))
+
+        ctk.CTkButton(tenor_row, text="Save", width=70, height=30,
+                      fg_color=ACCENT, hover_color=SP_HOVER,
+                      font=ctk.CTkFont(size=12),
+                      command=_save_tenor_key).pack(side="left")
+        tenor_status = ctk.CTkLabel(tenor_row, text="", text_color="#a8d8a8",
+                                     font=ctk.CTkFont(size=11))
+        tenor_status.pack(side="left", padx=(8, 0))
+
         # ── TAB 3: Appearance ────────────────────────────────────────────────
         A = self._tabs.tab("🎨  Appearance")
 
@@ -4810,7 +4857,9 @@ class App(ctk.CTk):
             pass
 
         ctk.CTkLabel(win, text="DURANDAL",
-                     font=ctk.CTkFont(family=self._title_font_family, size=18, weight="bold")).pack(pady=(0, 2))
+                     font=ctk.CTkFont(family=self._title_font_family, size=18, weight="bold")).pack(pady=(0, 0))
+        ctk.CTkLabel(win, text=f"v{VERSION}",
+                     text_color="gray45", font=ctk.CTkFont(size=10)).pack(pady=(0, 2))
         ctk.CTkLabel(win, text="Designed & built by CJ",
                      text_color="gray60", font=ctk.CTkFont(size=12)).pack()
         ctk.CTkLabel(win, text="A small fun project for my essentials —\nno sketchy sites needed.",
