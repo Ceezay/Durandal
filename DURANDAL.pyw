@@ -4,6 +4,10 @@ Self-contained: auto-installs Python deps and downloads FFmpeg on first launch.
 No manual setup required on Windows.
 """
 
+# freeze_support MUST be called before anything else for PyInstaller --onedir
+import multiprocessing
+multiprocessing.freeze_support()
+
 import os, sys, re, threading, subprocess, platform, zipfile, urllib.request, shutil
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
@@ -5106,8 +5110,6 @@ class App(ctk.CTk):
 
 
 if __name__ == "__main__":
-    import multiprocessing
-    multiprocessing.freeze_support()
     try:
         App().mainloop()
     except Exception as _e:
