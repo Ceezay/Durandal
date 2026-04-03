@@ -4689,13 +4689,59 @@ class App(ctk.CTk):
 
         # ── Window / taskbar icon ──
         try:
-            import base64 as _b64, io as _io
+            import base64 as _b64, io as _io, struct, tempfile as _tmp
             from PIL import Image, ImageTk
-            _raw  = _b64.b64decode(_ICON_B64)
-            _img  = Image.open(_io.BytesIO(_raw)).resize((64, 64), Image.LANCZOS)
-            _photo = ImageTk.PhotoImage(_img)
+
+            _raw = _b64.b64decode(_ICON_B64)
+            _src = Image.open(_io.BytesIO(_raw)).convert("RGBA")
+
+            # Build a proper multi-size ICO in a temp file so iconbitmap
+            # gives Windows all the sizes it needs (16→256) for taskbar,
+            # explorer, alt-tab, etc.
+            def _make_png(sz):
+                buf = _io.BytesIO()
+                _src.resize((sz, sz), Image.LANCZOS).save(buf, format="PNG")
+                return buf.getvalue()
+
+            _sizes   = [16, 24, 32, 48, 64, 128, 256]
+            _pngs    = [_make_png(s) for s in _sizes]
+            _num     = len(_sizes)
+            _dir_off = 6 + _num * 16
+            _offset  = _dir_off
+            _entries = []
+            for s, png in zip(_sizes, _pngs):
+                w = s if s < 256 else 0
+                _entries.append(struct.pack("<BBBBHHII", w, w, 0, 0, 1, 32, len(png), _offset))
+                _offset += len(png)
+
+            _ico_buf = _io.BytesIO()
+            _ico_buf.write(struct.pack("<HHH", 0, 1, _num))
+            for e in _entries: _ico_buf.write(e)
+            for p in _pngs:    _ico_buf.write(p)
+
+            _ico_tmp = _tmp.NamedTemporaryFile(delete=False, suffix=".ico",
+                                               dir=str(TOOLS_DIR))
+            _ico_tmp.write(_ico_buf.getvalue())
+            _ico_tmp.close()
+            _ico_path = _ico_tmp.name
+
+            # iconbitmap sets both the title-bar and taskbar icon on Windows
+            self.iconbitmap(_ico_path)
+
+            # Also set iconphoto for non-Windows / fallback
+            _photo = ImageTk.PhotoImage(_src.resize((64, 64), Image.LANCZOS))
             self.iconphoto(True, _photo)
-            self._app_icon = _photo   # keep reference alive
+            self._app_icon = _photo
+
+            # Tell Windows this is its own AppUserModelID so the taskbar
+            # groups it correctly and uses our icon rather than pythonw's
+            if platform.system() == "Windows":
+                try:
+                    import ctypes as _ct
+                    _ct.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                        "CJ.DURANDAL")
+                except Exception:
+                    pass
         except Exception:
             pass
 
