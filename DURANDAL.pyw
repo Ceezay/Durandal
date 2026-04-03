@@ -5207,13 +5207,38 @@ class App(ctk.CTk):
                                 segmented_button_selected_hover_color=YT_HOVER)
 
     def _apply_icon(self, win):
-        """Apply the app icon to a CTkToplevel window."""
-        try:
-            _ico_path = str(TOOLS_DIR / "appicon.ico")
-            if os.path.exists(_ico_path):
-                win.after(50, lambda: win.iconbitmap(_ico_path))
-        except Exception:
-            pass
+        """Apply the app icon to a CTkToplevel window using Windows API."""
+        def _do():
+            try:
+                _ico_path = str(TOOLS_DIR / "appicon.ico")
+                if not os.path.exists(_ico_path):
+                    return
+                # iconbitmap first
+                try:
+                    win.iconbitmap(_ico_path)
+                except Exception:
+                    pass
+                # Then reinforce with Windows API HICON for title bar + taskbar
+                if platform.system() == "Windows":
+                    try:
+                        import ctypes as _ct
+                        LR_LOADFROMFILE = 0x00000010
+                        IMAGE_ICON      = 1
+                        _hicon = _ct.windll.user32.LoadImageW(
+                            None, _ico_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
+                        if _hicon:
+                            _hwnd = _ct.windll.user32.GetParent(win.winfo_id())
+                            if not _hwnd:
+                                _hwnd = win.winfo_id()
+                            WM_SETICON = 0x0080
+                            _ct.windll.user32.SendMessageW(_hwnd, WM_SETICON, 1, _hicon)
+                            _ct.windll.user32.SendMessageW(_hwnd, WM_SETICON, 0, _hicon)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        # Delay long enough for CTkToplevel to finish its own setup
+        win.after(200, _do)
 
     def _show_update_notice(self, msg: str):
         self.after(0, self._display_notice, msg)
