@@ -244,8 +244,14 @@ def _needs_setup():
     return False
 
 # Defer all setup to __main__ to prevent PyInstaller re-entry loops
-_ffmpeg_path = None
+_ffmpeg_path = _ffmpeg_exe()   # resolves local bundle OR system PATH via shutil.which
 _setup_err   = None
+
+def _ffmpeg_opts() -> dict:
+    """Return {'ffmpeg_location': <path>} if ffmpeg was found, else {}."""
+    if _ffmpeg_path:
+        return {"ffmpeg_location": str(_ffmpeg_path)}
+    return {}
 
 if _setup_err:
     _r = tk.Tk(); _r.withdraw()
@@ -952,7 +958,7 @@ class YouTubeTab(ctk.CTkFrame, _Mixin):
                     "noplaylist":        False,
                     "extract_flat":      "in_playlist",
                     "playlistend":       1,        # only fetch first entry metadata
-                    "ffmpeg_location":   str(_ffmpeg_path),
+                    **_ffmpeg_opts(),
                     "socket_timeout":    10,
                     "retries":           1,
                     "extractor_retries": 1,
@@ -963,7 +969,7 @@ class YouTubeTab(ctk.CTkFrame, _Mixin):
                     "no_warnings":       True,
                     "skip_download":     True,
                     "noplaylist":        True,
-                    "ffmpeg_location":   str(_ffmpeg_path),
+                    **_ffmpeg_opts(),
                     "socket_timeout":    10,
                     "retries":           1,
                     "extractor_retries": 1,
@@ -1124,7 +1130,7 @@ class YouTubeTab(ctk.CTkFrame, _Mixin):
             # Don't use ignoreerrors for single videos — we want to see failures.
             # For playlists keep it True so one bad video doesn't abort the rest.
             "ignoreerrors":    playlist,
-            "ffmpeg_location": str(_ffmpeg_path),
+            **_ffmpeg_opts(),
             "retries":         5,
             "fragment_retries":10,
             "socket_timeout":  30,
@@ -1469,7 +1475,7 @@ class SpotifyTab(ctk.CTkFrame, _Mixin):
                 "format":          "bestaudio/best",
                 "outtmpl":         outtmpl,
                 "windowsfilenames": True,
-                "ffmpeg_location": str(_ffmpeg_path),
+                **_ffmpeg_opts(),
                 "quiet":           True,
                 "no_warnings":     True,
                 "postprocessors":  [{
@@ -1751,7 +1757,7 @@ class XDownloaderSubTab(ctk.CTkFrame, _Mixin):
             opts = {
                 "quiet": True, "no_warnings": True,
                 "skip_download": True,
-                "ffmpeg_location": str(_ffmpeg_path),
+                **_ffmpeg_opts(),
                 "socket_timeout": 15,
             }
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -1813,7 +1819,7 @@ class XDownloaderSubTab(ctk.CTkFrame, _Mixin):
             "format":           q_map.get(q, "best"),
             "outtmpl":          self._get_outtmpl(save),
             "windowsfilenames": True,
-            "ffmpeg_location":  str(_ffmpeg_path),
+            **_ffmpeg_opts(),
             "merge_output_format": "mp4",
             "progress_hooks":   [self._progress_hook],
             "quiet":            True,
@@ -2093,7 +2099,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
         try:
             with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True,
                                     "skip_download": True,
-                                    "ffmpeg_location": str(_ffmpeg_path)}) as ydl:
+                                    **_ffmpeg_opts()}) as ydl:
                 info = ydl.extract_info(url, download=False)
             title    = info.get("title") or info.get("description") or "X Video"
             uploader = info.get("uploader") or "?"
@@ -2166,7 +2172,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                     "quiet": True, "no_warnings": True,
                     "outtmpl": tmp_mp4,
                     "format": "bestvideo[ext=mp4]+bestaudio/best[ext=mp4]/best",
-                    "ffmpeg_location": str(_ffmpeg_path),
+                    **_ffmpeg_opts(),
                 }
                 with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                     ydl.download([url])
@@ -2189,15 +2195,16 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                 palette = str(Path(tmp) / "palette.png")
                 setpts  = f"setpts={1/speed:.6g}*PTS," if speed != 1.0 else ""
                 vf_base = f"{setpts}fps={fps},scale={width}:-1:flags=lanczos"
+                _ff = str(_ffmpeg_path) if _ffmpeg_path else "ffmpeg"
                 cmd_pal = (
-                    [str(_ffmpeg_path), "-y"]
+                    [_ff, "-y"]
                     + trim_in + trim_out
                     + ["-i", actual_mp4,
                        "-vf", f"{vf_base},palettegen=max_colors={cols}",
                        palette]
                 )
                 cmd_gif = (
-                    [str(_ffmpeg_path), "-y"]
+                    [_ff, "-y"]
                     + trim_in + trim_out
                     + ["-i", actual_mp4, "-i", palette,
                        "-lavfi", f"{vf_base}[x];[x][1:v]paletteuse",
@@ -2628,7 +2635,7 @@ class GifSubTab(ctk.CTkFrame, _Mixin):
                 "quiet": True, "no_warnings": True,
                 "outtmpl": str(tmp_mp4),
                 "format": "best[ext=mp4]/best",
-                "ffmpeg_location": str(_ffmpeg_path),
+                **_ffmpeg_opts(),
             }
             # Get info first
             with yt_dlp.YoutubeDL({**opts, "skip_download": True}) as ydl:
@@ -2656,7 +2663,7 @@ class GifSubTab(ctk.CTkFrame, _Mixin):
             speed = float(self._speed_var.get().replace("\u00d7", ""))
             setpts = f"setpts={1/speed:.6g}*PTS," if speed != 1.0 else ""
             cmd = [
-                str(_ffmpeg_path), "-y",
+                str(_ffmpeg_path) if _ffmpeg_path else "ffmpeg", "-y",
                 "-i", str(mp4_path),
                 "-vf", f"{setpts}fps=15,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
                 str(tmp_gif)
@@ -2919,7 +2926,7 @@ class GifToMp4SubTab(ctk.CTkFrame, _Mixin):
 
             CREATE_NO_WINDOW = 0x08000000
             cmd = [
-                str(_ffmpeg_path), "-y",
+                str(_ffmpeg_path) if _ffmpeg_path else "ffmpeg", "-y",
                 "-i", gif_path,
                 "-vf", vf,
                 "-c:v", "libx264",
@@ -4470,7 +4477,8 @@ class SettingsPanel(ctk.CTkFrame):
             return sys.version.split()[0]
         elif name == "FFmpeg":
             try:
-                r = subprocess.run([str(_ffmpeg_path), "-version"],
+                _ff = str(_ffmpeg_path) if _ffmpeg_path else "ffmpeg"
+                r = subprocess.run([_ff, "-version"],
                                    capture_output=True, text=True, timeout=5)
                 raw = r.stdout.splitlines()[0].split("version")[-1].strip().split()[0]
                 return raw.split("-")[0].split("_")[0]
