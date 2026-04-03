@@ -22,7 +22,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-VERSION = "1.0.1"
+VERSION = "1.0.0"
 
 # When frozen by PyInstaller, sys.executable is the .exe itself.
 # Use this helper everywhere we need to invoke Python/pip.
@@ -510,20 +510,10 @@ def run_background_updates(on_done=None):
 
 def check_for_new_release(on_update_found=None):
     """
-    Check GitHub releases once per day. If a newer version tag exists,
+    Check GitHub releases on every launch. If a newer version tag exists,
     call on_update_found(latest_version, release_url).
     """
     def _worker():
-        try:
-            # Only check once per day
-            if RELEASE_STAMP.exists():
-                data = json.loads(RELEASE_STAMP.read_text())
-                last = datetime.datetime.fromisoformat(data.get("last_check", "1970-01-01"))
-                if datetime.datetime.now() - last < datetime.timedelta(hours=24):
-                    return
-        except Exception:
-            pass
-
         try:
             import urllib.request as _ur
             url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -4486,6 +4476,30 @@ class SettingsPanel(ctk.CTkFrame):
                      text_color="gray50", font=ctk.CTkFont(size=10),
                      wraplength=360, justify="left").pack(anchor="w", padx=14, pady=(0,12))
 
+        # App release check
+        rcard = ctk.CTkFrame(U, corner_radius=8)
+        rcard.pack(fill="x", padx=8, pady=(0,6))
+        rel_hdr = ctk.CTkFrame(rcard, fg_color="transparent")
+        rel_hdr.pack(fill="x", padx=14, pady=(12,4))
+        ctk.CTkLabel(rel_hdr, text="DURANDAL App",
+                     font=ctk.CTkFont(size=13, weight="bold")).pack(side="left")
+        self._rel_version_lbl = ctk.CTkLabel(rel_hdr, text=f"v{VERSION}",
+                                              text_color="gray55",
+                                              font=ctk.CTkFont(size=11))
+        self._rel_version_lbl.pack(side="right")
+        rel_row = ctk.CTkFrame(rcard, fg_color="transparent")
+        rel_row.pack(fill="x", padx=14, pady=(0,12))
+        self._rel_status_lbl = ctk.CTkLabel(rel_row, text="",
+                                             text_color="gray55",
+                                             font=ctk.CTkFont(size=11), anchor="w")
+        self._rel_status_lbl.pack(side="left", fill="x", expand=True)
+        self._rel_check_btn = ctk.CTkButton(rel_row, text="Check for Update",
+                                             width=160, height=30,
+                                             font=ctk.CTkFont(size=12),
+                                             fg_color=ACCENT, hover_color=SP_HOVER,
+                                             command=self._check_release_now)
+        self._rel_check_btn.pack(side="right")
+
         # Component versions
         ucard = ctk.CTkFrame(U, corner_radius=8)
         ucard.pack(fill="x", padx=8, pady=(0,6))
@@ -4703,10 +4717,60 @@ class SettingsPanel(ctk.CTkFrame):
 
         threading.Thread(target=_worker, daemon=True).start()
 
+    def _check_release_now(self):
+        """Manually check GitHub for a newer DURANDAL release."""
+        self._rel_check_btn.configure(state="disabled", text="Checking…")
+        self._rel_status_lbl.configure(text="Checking GitHub…", text_color="#4fc3f7")
 
+        # Delete the stamp so check_for_new_release runs immediately
+        try: RELEASE_STAMP.unlink()
+        except FileNotFoundError: pass
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Main Window
+        def _on_found(tag, url):
+            self.after(0, lambda: (
+                self._rel_status_lbl.configure(
+                    text=f"⚠  v{tag} is available — you're on v{VERSION}",
+                    text_color="#f4a261"),
+                self._rel_check_btn.configure(state="normal", text="Check for Update")
+            ))
+            # Also show the popup dialog via the App window
+            self.master._on_new_release_found(tag, url)
+
+        def _worker():
+            import urllib.request as _ur, json as _js
+            try:
+                url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
+                req = _ur.Request(url, headers={"User-Agent": "DURANDAL-updater"})
+                with _ur.urlopen(req, timeout=10) as resp:
+                    data = _js.loads(resp.read().decode())
+                TOOLS_DIR.mkdir(parents=True, exist_ok=True)
+                RELEASE_STAMP.write_text(
+                    _js.dumps({"last_check": datetime.datetime.now().isoformat()}))
+                tag = data.get("tag_name", "").lstrip("v")
+                release_url = data.get("html_url",
+                    f"https://github.com/{GITHUB_REPO}/releases/latest")
+                def _ver(s):
+                    try: return tuple(int(x) for x in s.split("."))
+                    except: return (0,)
+                if tag and _ver(tag) > _ver(VERSION):
+                    _on_found(tag, release_url)
+                else:
+                    self.after(0, lambda: (
+                        self._rel_status_lbl.configure(
+                            text="✅  You're on the latest version.",
+                            text_color="#a8d8a8"),
+                        self._rel_check_btn.configure(
+                            state="normal", text="Check for Update")
+                    ))
+            except Exception:
+                self.after(0, lambda: (
+                    self._rel_status_lbl.configure(
+                        text="❌  Could not reach GitHub.", text_color="#ff6b6b"),
+                    self._rel_check_btn.configure(
+                        state="normal", text="Check for Update")
+                ))
+
+        threading.Thread(target=_worker, daemon=True).start()
 # ─────────────────────────────────────────────────────────────────────────────
 class App(ctk.CTk):
     def __init__(self):
@@ -5119,6 +5183,15 @@ class App(ctk.CTk):
             self.tabs.configure(segmented_button_selected_color=YT_RED,
                                 segmented_button_selected_hover_color=YT_HOVER)
 
+    def _apply_icon(self, win):
+        """Apply the app icon to a CTkToplevel window."""
+        try:
+            _ico_path = str(TOOLS_DIR / "appicon.ico")
+            if os.path.exists(_ico_path):
+                win.after(50, lambda: win.iconbitmap(_ico_path))
+        except Exception:
+            pass
+
     def _show_update_notice(self, msg: str):
         self.after(0, self._display_notice, msg)
 
@@ -5140,12 +5213,13 @@ class App(ctk.CTk):
         win.resizable(False, False)
         win.transient(self)
         win.grab_set()
+        self._apply_icon(win)
         self.update_idletasks()
         x = self.winfo_x() + (self.winfo_width()  - 380) // 2
         y = self.winfo_y() + (self.winfo_height() - 220) // 2
         win.geometry(f"+{x}+{y}")
 
-        ctk.CTkLabel(win, text="🆕  Update Available",
+        ctk.CTkLabel(win, text="Update Available",
                      font=ctk.CTkFont(size=16, weight="bold")).pack(pady=(22, 4))
         ctk.CTkLabel(win,
                      text=f"DURANDAL {latest_version} is out.\nYou're on v{VERSION}.",
@@ -5176,6 +5250,7 @@ class App(ctk.CTk):
         win.resizable(False, False)
         win.transient(self)
         win.grab_set()
+        self._apply_icon(win)
         self.update_idletasks()
         x = self.winfo_x() + (self.winfo_width()  - 360) // 2
         y = self.winfo_y() + (self.winfo_height() - 400) // 2
@@ -5253,6 +5328,7 @@ class App(ctk.CTk):
         win.transient(self)
         win.grab_set()
         win.configure(fg_color="black")
+        self._apply_icon(win)
         try:
             _raw = _b64.b64decode(_EGG_B64)
             _pil_orig = Image.open(_io.BytesIO(_raw))
