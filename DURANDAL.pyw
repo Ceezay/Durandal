@@ -75,11 +75,37 @@ def _pip_install(pkg, imp=None):
     )
 
 def _ffmpeg_exe():
-    """Return path to a working ffmpeg binary, or None."""
-    local = FFMPEG_DIR / ("ffmpeg.exe" if platform.system()=="Windows" else "ffmpeg")
+    """Return path to a working ffmpeg binary, or None.
+    Frozen PyInstaller exes don't inherit system PATH, so shutil.which fails
+    even when ffmpeg is installed system-wide. Fix: read PATH directly from
+    the Windows registry so shutil.which gets the real search paths.
+    """
+    local = FFMPEG_DIR / ("ffmpeg.exe" if platform.system() == "Windows" else "ffmpeg")
     if local.exists():
         return local
-    found = shutil.which("ffmpeg")
+
+    search_path = os.environ.get("PATH", "")
+    if platform.system() == "Windows" and getattr(sys, "frozen", False):
+        try:
+            import winreg
+            paths = []
+            for hive, subkey in [
+                (winreg.HKEY_LOCAL_MACHINE,
+                 r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+                (winreg.HKEY_CURRENT_USER, r"Environment"),
+            ]:
+                try:
+                    with winreg.OpenKey(hive, subkey) as key:
+                        val, _ = winreg.QueryValueEx(key, "PATH")
+                        paths.append(val)
+                except FileNotFoundError:
+                    pass
+            if paths:
+                search_path = os.pathsep.join(paths) + os.pathsep + search_path
+        except Exception:
+            pass
+
+    found = shutil.which("ffmpeg", path=search_path)
     return Path(found) if found else None
 
 def _download_ffmpeg_windows():
