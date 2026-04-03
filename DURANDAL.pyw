@@ -1969,11 +1969,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                                   "1.5\u00d7", "2\u00d7", "3\u00d7", "4\u00d7"],
                           width=75, fg_color=X_ACCENT,
                           button_color=X_HOVER, button_hover_color=X_HOVER
-                          ).pack(side="left", padx=(6,6))
-        self._apply_speed_btn = ctk.CTkButton(opt, text="Apply", width=60, height=28,
-                          fg_color=X_ACCENT, hover_color=X_HOVER,
-                          state="disabled", command=self._start)
-        self._apply_speed_btn.pack(side="left", padx=(0,0))
+                          ).pack(side="left", padx=(6,0))
 
         # Trim section
         tf = ctk.CTkFrame(self, corner_radius=8); tf.pack(fill="x", padx=18, pady=(4,4))
@@ -2173,7 +2169,6 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                     text_color="#4fc3f7")
                 self.fetch_btn.configure(state="normal", text="Load Info")
                 self.dl_btn.configure(state="normal")
-                self._apply_speed_btn.configure(state="normal")
                 self._set_filename_hint(title)
                 if duration:
                     self.trim_dur_lbl.configure(text=f"Duration: {dur_s}")
@@ -2209,7 +2204,6 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
         if not self._confirm_download("X → GIF"): return
         self._maybe_clear_log()
         self.dl_btn.configure(state="disabled", text="Converting…")
-        self._apply_speed_btn.configure(state="disabled")
         self.progress_bar.set(0)
         import threading
         threading.Thread(target=self._worker, args=(url, save, ts, te), daemon=True).start()
@@ -2281,7 +2275,6 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
             size_mb = out.stat().st_size / 1_048_576
             self.after(0, lambda: (
                 self.dl_btn.configure(state="normal", text="🔄  Convert to GIF"),
-                self._apply_speed_btn.configure(state="normal"),
                 self.progress_bar.set(1.0),
                 self.status_lbl.configure(text=f"✅  Done — {out.name}  ({size_mb:.1f} MB)"),
                 self._log(f"✔  Saved: {out}"),
@@ -2290,7 +2283,6 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
         except Exception as e:
             self.after(0, lambda err=str(e): (
                 self.dl_btn.configure(state="normal", text="🔄  Convert to GIF"),
-                self._apply_speed_btn.configure(state="normal"),
                 self.status_lbl.configure(text="❌  Error — see log"),
                 self._log(f"ERROR: {err}"),
                 messagebox.showerror("Conversion failed", err)
@@ -2632,7 +2624,11 @@ class GifSubTab(ctk.CTkFrame, _Mixin):
                                   "1.5\u00d7", "2\u00d7", "3\u00d7", "4\u00d7"],
                           width=75, fg_color=GIF_ACCENT,
                           button_color=GIF_HOVER, button_hover_color=GIF_HOVER
-                          ).pack(side="left", padx=(8,0))
+                          ).pack(side="left", padx=(8,6))
+        self._apply_speed_btn = ctk.CTkButton(sp_row, text="Apply", width=60, height=28,
+                          fg_color=GIF_ACCENT, hover_color=GIF_HOVER,
+                          state="disabled", command=self._save)
+        self._apply_speed_btn.pack(side="left")
 
         self.save_btn = ctk.CTkButton(self, text="💾  Save GIF", height=38,
                                        font=ctk.CTkFont(size=13, weight="bold"),
@@ -2684,6 +2680,7 @@ class GifSubTab(ctk.CTkFrame, _Mixin):
         self._gif_data = None; self._gif_frames = []; self._gif_delays = []
         self.fetch_btn.configure(state="disabled", text="Loading…")
         self.save_btn.configure(state="disabled")
+        self._apply_speed_btn.configure(state="disabled")
         self._img_lbl.config(image="", text="Fetching…")
         self._set_status("Fetching GIF info…"); self._set_progress(0)
         threading.Thread(target=self._do_fetch, args=(url,), daemon=True).start()
@@ -2759,6 +2756,7 @@ class GifSubTab(ctk.CTkFrame, _Mixin):
             self._gif_frames = [ImageTk.PhotoImage(f) for f in raw_frames]
             self.after(0, lambda: (
                 self.save_btn.configure(state="normal"),
+                self._apply_speed_btn.configure(state="normal"),
                 self._set_status("Ready to save."),
                 self._set_progress(1.0),
                 self._start_anim()))
