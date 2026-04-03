@@ -1,8 +1,9 @@
-![DURANDAL](icon.png)
+<div align="center">
+<img src="icon.png" width="120"/>
 
 # DURANDAL
 
-DURANDAL is a personal media downloader for Windows with a dark GUI inspired by the rogue AI from Bungie's *Marathon*. No sketchy sites, no bloat — just a clean tool built around the things that actually matter.
+DURANDAL is a personal media downloader I made for myself for Windows with a dark GUI inspired by the rogue AI from Bungie's *Marathon*. No sketchy sites, no bloat — just a clean tool built around the things that actually matter.
 
 > *"I am DURANDAL."*
 
