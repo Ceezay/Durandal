@@ -417,12 +417,15 @@ def _get_installed_version(pkg):
         "Pillow":        "PIL",
         "spotdl":        "spotdl",
         "mutagen":       "mutagen",
+        "certifi":       "certifi",
     }
     try:
         mod = __import__(_mod_map.get(pkg, pkg))
         # Package-specific version paths
         if pkg == "yt-dlp":
             from yt_dlp.version import __version__ as _v; return _v
+        if pkg == "spotdl":
+            from spotdl._version import __version__ as _v; return _v
         if pkg == "mutagen":
             return getattr(mod, "version_string", None) or ".".join(str(x) for x in mod.version)
         for attr in ("__version__", "version", "VERSION"):
@@ -4471,7 +4474,7 @@ class SettingsPanel(ctk.CTkFrame):
         ucard.pack(fill="x", padx=8, pady=(0,6))
 
         self._comp_rows = {}
-        COMPONENTS = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen", "Python", "FFmpeg"]
+        COMPONENTS = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen", "certifi", "Python", "FFmpeg"]
         grid = ctk.CTkFrame(ucard, fg_color="transparent")
         grid.pack(fill="x", padx=14, pady=(12,8))
         for name in COMPONENTS:
@@ -4587,7 +4590,7 @@ class SettingsPanel(ctk.CTkFrame):
         statuses:      dict of name -> ok | updated | checking | error
         ver_overrides: dict of name -> display string (e.g. "2025.1 → 2026.3")
         """
-        COMPONENTS = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen", "Python", "FFmpeg"]
+        COMPONENTS = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen", "certifi", "Python", "FFmpeg"]
         statuses     = statuses     or {}
         ver_overrides = ver_overrides or {}
         for name in COMPONENTS:
@@ -4628,7 +4631,7 @@ class SettingsPanel(ctk.CTkFrame):
         try: UPDATE_STAMP.unlink()
         except FileNotFoundError: pass
 
-        UPGRADEABLE = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen"]
+        UPGRADEABLE = ["yt-dlp", "spotdl", "customtkinter", "Pillow", "mutagen", "certifi"]
         STATIC      = ["Python", "FFmpeg"]
 
         # Show all upgradeable as checking, static as ok immediately
