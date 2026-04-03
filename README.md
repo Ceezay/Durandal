@@ -5,6 +5,8 @@
 
 DURANDAL is a personal media downloader I made for myself for Windows with a dark GUI inspired by the rogue AI from Bungie's *Marathon*. No sketchy sites, no bloat — just a clean tool built around the things that actually matter.
 
+Windows SmartScreen may flag this app as unrecognised. This is normal for unsigned software distributed outside the Microsoft Store. Click "More info" → "Run anyway" to launch it.
+
 > *"I am DURANDAL."*
 
 Download the latest release from the [Releases](https://github.com/Ceezay/Durandal/releases) page.
