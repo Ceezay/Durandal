@@ -1,0 +1,68 @@
+<div align="center">
+
+<img src="icon.png" width="120" alt="DURANDAL"/>
+
+# DURANDAL
+
+*A personal media downloader. No sketchy sites. No bloat.*
+
+---
+
+**DURANDAL** is a desktop media downloader for Windows, built around the things that actually matter — YouTube, Spotify, X, and more — wrapped in a dark GUI inspired by the rogue AI from Bungie's *Marathon*. Fast, self-contained, and built for daily use.
+
+[![Version](https://img.shields.io/badge/version-1.0.0-orange?style=flat-square)](https://github.com/Ceezay/Durandal/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows-blue?style=flat-square)]()
+[![License](https://img.shields.io/badge/license-Personal-gray?style=flat-square)]()
+
+</div>
+
+---
+
+## What it does
+
+| Tab | What you get |
+|-----|-------------|
+| **YouTube** | MP4 or MP3, quality & FPS selection, playlists, clip trimming |
+| **Spotify** | Tracks downloaded as MP3 via YouTube Music, with metadata & artwork embedded |
+| **X (Twitter)** | Videos, native GIFs, and a video → GIF converter with speed & quality controls |
+| **Art Grab** | Pull album and track artwork from YouTube or Spotify URLs |
+| **GIF → MP4** | Convert any local GIF to MP4 with scale and FPS options |
+| **Discord & Tenor** | Download attachments from Discord CDN links and Tenor GIFs |
+| **Avatar Cropper** | Crop images or GIFs to standard avatar sizes with filters and quality presets |
+
+---
+
+## Getting started
+
+1. Download the latest `.exe` from [Releases](https://github.com/Ceezay/Durandal/releases)
+2. Run it — no installation required
+3. On first launch it will set itself up automatically
+
+That's it. No Python, no FFmpeg, no dependencies to install manually. Everything is handled on first run.
+
+---
+
+## Requirements
+
+- Windows 10 or 11
+- An internet connection on first launch
+
+---
+
+## Feedback & suggestions
+
+Found a bug? Got an idea? Head over to [Discussions](https://github.com/Ceezay/Durandal/discussions) and drop it there.
+
+---
+
+<div align="center">
+
+Designed & built by **CJ**
+
+[![X](https://img.shields.io/badge/@BLAZlNGAMBER-black?style=flat-square&logo=x)](https://x.com/BLAZlNGAMBER)
+[![YouTube](https://img.shields.io/badge/YouTube-red?style=flat-square&logo=youtube)](https://www.youtube.com/@BlazingAmber)
+[![Steam](https://img.shields.io/badge/Steam-1b2838?style=flat-square&logo=steam)](https://steamcommunity.com/id/BlazingAmber/)
+
+*Powered by yt-dlp · spotdl · ffmpeg · Pillow · customtkinter · mutagen · certifi*
+
+</div>
