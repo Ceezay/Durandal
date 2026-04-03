@@ -4706,9 +4706,7 @@ class App(ctk.CTk):
             _raw = _b64.b64decode(_ICON_B64)
             _src = Image.open(_io.BytesIO(_raw)).convert("RGBA")
 
-            # Build a proper multi-size ICO in a temp file so iconbitmap
-            # gives Windows all the sizes it needs (16→256) for taskbar,
-            # explorer, alt-tab, etc.
+            # Build multi-size ICO and write to a persistent temp file
             def _make_png(sz):
                 buf = _io.BytesIO()
                 _src.resize((sz, sz), Image.LANCZOS).save(buf, format="PNG")
@@ -4717,8 +4715,7 @@ class App(ctk.CTk):
             _sizes   = [16, 24, 32, 48, 64, 128, 256]
             _pngs    = [_make_png(s) for s in _sizes]
             _num     = len(_sizes)
-            _dir_off = 6 + _num * 16
-            _offset  = _dir_off
+            _offset  = 6 + _num * 16
             _entries = []
             for s, png in zip(_sizes, _pngs):
                 w = s if s < 256 else 0
@@ -4730,29 +4727,47 @@ class App(ctk.CTk):
             for e in _entries: _ico_buf.write(e)
             for p in _pngs:    _ico_buf.write(p)
 
-            _ico_tmp = _tmp.NamedTemporaryFile(delete=False, suffix=".ico",
-                                               dir=str(TOOLS_DIR))
-            _ico_tmp.write(_ico_buf.getvalue())
-            _ico_tmp.close()
-            _ico_path = _ico_tmp.name
+            _ico_path = str(TOOLS_DIR / "appicon.ico")
+            with open(_ico_path, "wb") as _f:
+                _f.write(_ico_buf.getvalue())
 
-            # iconbitmap sets both the title-bar and taskbar icon on Windows
+            # Set title-bar icon via iconbitmap
             self.iconbitmap(_ico_path)
 
-            # Also set iconphoto for non-Windows / fallback — use 256px for crisp taskbar
+            # Use Windows API to load the ICO as a proper HICON and send it
+            # to the window — this is what makes the taskbar icon crisp
+            if platform.system() == "Windows":
+                try:
+                    import ctypes as _ct, ctypes.wintypes as _wt
+
+                    # AppUserModelID — groups taskbar correctly
+                    _ct.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                        "CJ.DURANDAL")
+
+                    # Load icon at 256px (HICON) from the ICO file
+                    LR_LOADFROMFILE = 0x00000010
+                    IMAGE_ICON      = 1
+                    _hicon = _ct.windll.user32.LoadImageW(
+                        None, _ico_path, IMAGE_ICON, 256, 256, LR_LOADFROMFILE)
+
+                    if _hicon:
+                        # Get the real HWND from the Tk window
+                        _hwnd = _ct.windll.user32.GetParent(self.winfo_id())
+                        if not _hwnd:
+                            _hwnd = self.winfo_id()
+                        WM_SETICON   = 0x0080
+                        ICON_SMALL   = 0
+                        ICON_BIG     = 1
+                        _ct.windll.user32.SendMessageW(_hwnd, WM_SETICON, ICON_BIG,   _hicon)
+                        _ct.windll.user32.SendMessageW(_hwnd, WM_SETICON, ICON_SMALL, _hicon)
+                except Exception:
+                    pass
+
+            # iconphoto fallback for non-Windows
             _photo = ImageTk.PhotoImage(_src.resize((256, 256), Image.LANCZOS))
             self.iconphoto(True, _photo)
             self._app_icon = _photo
 
-            # Tell Windows this is its own AppUserModelID so the taskbar
-            # groups it correctly and uses our icon rather than pythonw's
-            if platform.system() == "Windows":
-                try:
-                    import ctypes as _ct
-                    _ct.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-                        "CJ.DURANDAL")
-                except Exception:
-                    pass
         except Exception:
             pass
 
