@@ -403,12 +403,20 @@ def get_folder_history(pref_key: str) -> list:
     return prefs.get(hist_key, [])
 
 def _get_installed_version(pkg):
+    # Try importlib.metadata first — works in both frozen and normal Python
     try:
-        r = subprocess.run([_python_exe(),"-m","pip","show",pkg],
-                           capture_output=True, text=True, timeout=10)
+        from importlib.metadata import version as _imv
+        return _imv(pkg)
+    except Exception:
+        pass
+    # Fall back to pip show (works when running as .pyw script)
+    try:
+        r = subprocess.run([_python_exe(), "-m", "pip", "show", pkg],
+                           capture_output=True, text=True, timeout=10,
+                           creationflags=0x08000000 if platform.system() == "Windows" else 0)
         for line in r.stdout.splitlines():
             if line.startswith("Version:"):
-                return line.split(":",1)[1].strip()
+                return line.split(":", 1)[1].strip()
     except Exception:
         pass
     return None
@@ -4459,16 +4467,16 @@ class SettingsPanel(ctk.CTkFrame):
             self._comp_rows[name] = {"icon": icon_lbl, "ver": ver_lbl, "bar": bar}
 
         ubr = ctk.CTkFrame(ucard, fg_color="transparent")
-        ubr.pack(fill="x", padx=14, pady=(4,14))
-        self._upd_overall = ctk.CTkLabel(ubr, text="", text_color="gray55",
-                                          font=ctk.CTkFont(size=11),
-                                          anchor="w", wraplength=400)
-        self._upd_overall.pack(side="left", fill="x", expand=True)
+        ubr.pack(fill="x", padx=14, pady=(4,4))
         self._upd_btn = ctk.CTkButton(ubr, text="Check & Update All",
                                        width=200, height=30,
                                        font=ctk.CTkFont(size=12),
                                        command=self._check_updates_now)
         self._upd_btn.pack(side="right")
+        self._upd_overall = ctk.CTkLabel(ucard, text="", text_color="gray55",
+                                          font=ctk.CTkFont(size=11),
+                                          anchor="w", wraplength=280)
+        self._upd_overall.pack(fill="x", padx=14, pady=(0, 14))
         self._refresh_versions({}, {})
 
     def _on_scale_slide(self, val):
