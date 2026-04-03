@@ -409,25 +409,23 @@ def _get_installed_version(pkg):
         return _imv(pkg)
     except Exception:
         pass
-    # 2. Direct __version__ attribute — works in frozen builds where the
-    #    package code is bundled but .dist-info is not
-    _mod_map = {
-        "yt-dlp":        "yt_dlp",
-        "customtkinter": "customtkinter",
-        "Pillow":        "PIL",
-        "spotdl":        "spotdl",
-        "mutagen":       "mutagen",
-        "certifi":       "certifi",
-    }
+    # 2. Direct submodule/attribute — works in frozen builds where .dist-info is absent.
+    #    Each package uses the lightest possible import to avoid triggering heavy deps.
     try:
-        mod = __import__(_mod_map.get(pkg, pkg))
-        # Package-specific version paths
         if pkg == "yt-dlp":
             from yt_dlp.version import __version__ as _v; return _v
         if pkg == "spotdl":
+            # Import _version directly — avoids spotdl.__init__ which pulls in
+            # SpotifyClient, Downloader etc. and fails silently in frozen builds
             from spotdl._version import __version__ as _v; return _v
         if pkg == "mutagen":
-            return getattr(mod, "version_string", None) or ".".join(str(x) for x in mod.version)
+            import mutagen as _m
+            return getattr(_m, "version_string", None) or ".".join(str(x) for x in _m.version)
+        if pkg == "certifi":
+            import certifi as _c; return getattr(_c, "__version__", None)
+        # Generic fallback for customtkinter, Pillow etc.
+        _mod_map = {"customtkinter": "customtkinter", "Pillow": "PIL"}
+        mod = __import__(_mod_map.get(pkg, pkg))
         for attr in ("__version__", "version", "VERSION"):
             v = getattr(mod, attr, None)
             if isinstance(v, str) and v:
@@ -5208,7 +5206,7 @@ class App(ctk.CTk):
         ctk.CTkLabel(win, text="A small fun project for my essentials —\nno sketchy sites needed.",
                      text_color="gray50", font=ctk.CTkFont(size=10),
                      justify="center").pack(pady=(4,0))
-        ctk.CTkLabel(win, text="Powered by yt-dlp · spotdl · ffmpeg · Pillow · customtkinter · mutagen",
+        ctk.CTkLabel(win, text="Powered by yt-dlp · spotdl · ffmpeg · Pillow · customtkinter · mutagen · certifi",
                      text_color="gray55", font=ctk.CTkFont(size=10),
                      wraplength=320, justify="center").pack(pady=(2,0))
         ctk.CTkLabel(win, text="© 2026  •  All rights reserved",
