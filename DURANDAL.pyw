@@ -4741,8 +4741,20 @@ class SettingsPanel(ctk.CTkFrame):
             try:
                 url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
                 req = _ur.Request(url, headers={"User-Agent": "DURANDAL-updater"})
-                with _ur.urlopen(req, timeout=10) as resp:
-                    data = _js.loads(resp.read().decode())
+                try:
+                    with _ur.urlopen(req, timeout=10) as resp:
+                        data = _js.loads(resp.read().decode())
+                except Exception:
+                    # Network error or GitHub unreachable
+                    self.after(0, lambda: (
+                        self._rel_status_lbl.configure(
+                            text="⚠  Could not reach GitHub — check your connection.",
+                            text_color="gray50"),
+                        self._rel_check_btn.configure(
+                            state="normal", text="Check for Update")
+                    ))
+                    return
+
                 TOOLS_DIR.mkdir(parents=True, exist_ok=True)
                 RELEASE_STAMP.write_text(
                     _js.dumps({"last_check": datetime.datetime.now().isoformat()}))
@@ -4752,7 +4764,17 @@ class SettingsPanel(ctk.CTkFrame):
                 def _ver(s):
                     try: return tuple(int(x) for x in s.split("."))
                     except: return (0,)
-                if tag and _ver(tag) > _ver(VERSION):
+
+                if not tag:
+                    # GitHub responded but no release exists yet
+                    self.after(0, lambda: (
+                        self._rel_status_lbl.configure(
+                            text="✅  You're on the latest version.",
+                            text_color="#a8d8a8"),
+                        self._rel_check_btn.configure(
+                            state="normal", text="Check for Update")
+                    ))
+                elif _ver(tag) > _ver(VERSION):
                     _on_found(tag, release_url)
                 else:
                     self.after(0, lambda: (
@@ -4765,7 +4787,8 @@ class SettingsPanel(ctk.CTkFrame):
             except Exception:
                 self.after(0, lambda: (
                     self._rel_status_lbl.configure(
-                        text="❌  Could not reach GitHub.", text_color="#ff6b6b"),
+                        text="⚠  Could not reach GitHub — check your connection.",
+                        text_color="gray50"),
                     self._rel_check_btn.configure(
                         state="normal", text="Check for Update")
                 ))
