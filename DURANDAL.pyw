@@ -3496,9 +3496,12 @@ class AvatarCropperSubTab(ctk.CTkFrame):
             state="disabled", command=self._export)
         self._dl_btn.pack(side="left", padx=(0, 14))
 
+        # Status on its own row so it doesn't shrink the button row
+        _status_row = ctk.CTkFrame(self, fg_color="transparent")
+        _status_row.pack(fill="x", padx=18, pady=(0, 6))
         self._dl_status = ctk.CTkLabel(
-            bot, text="",
-            text_color="gray50", font=ctk.CTkFont(size=11))
+            _status_row, text="",
+            text_color="gray50", font=ctk.CTkFont(size=11), anchor="w")
         self._dl_status.pack(side="left")
 
     # ── Browse ───────────────────────────────────────────────────────────────
@@ -4736,8 +4739,8 @@ class App(ctk.CTk):
             # iconbitmap sets both the title-bar and taskbar icon on Windows
             self.iconbitmap(_ico_path)
 
-            # Also set iconphoto for non-Windows / fallback
-            _photo = ImageTk.PhotoImage(_src.resize((64, 64), Image.LANCZOS))
+            # Also set iconphoto for non-Windows / fallback — use 256px for crisp taskbar
+            _photo = ImageTk.PhotoImage(_src.resize((256, 256), Image.LANCZOS))
             self.iconphoto(True, _photo)
             self._app_icon = _photo
 
