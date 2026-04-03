@@ -22,7 +22,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 import tkinter as tk
 
-VERSION = "1.0.0"
+VERSION = "1.0.1"
 
 # When frozen by PyInstaller, sys.executable is the .exe itself.
 # Use this helper everywhere we need to invoke Python/pip.
@@ -5225,13 +5225,22 @@ class App(ctk.CTk):
             ("🎮  Steam",              "https://steamcommunity.com/id/BlazingAmber/",   "#1b2838",    "#2a3f5f"),
         ]
         btn_row = ctk.CTkFrame(win, fg_color="transparent")
-        btn_row.pack(pady=(0,14))
+        btn_row.pack(pady=(0,8))
         for label, url, fg, hv in socials:
             ctk.CTkButton(btn_row, text=label, width=100, height=30,
                           fg_color=fg, hover_color=hv,
                           font=ctk.CTkFont(size=11),
                           command=lambda u=url: self._open_link(u)
                           ).pack(side="left", padx=5)
+
+        # Feedback button
+        ctk.CTkFrame(win, height=1, fg_color="gray30").pack(fill="x", padx=24, pady=(4,10))
+        ctk.CTkButton(win, text="💬  Feedback & Suggestions",
+                      width=220, height=32,
+                      fg_color="#238636", hover_color="#2ea043",
+                      font=ctk.CTkFont(size=12),
+                      command=lambda: self._open_link("https://github.com/Ceezay/Durandal/discussions")
+                      ).pack(pady=(0,14))
 
 
     def _show_egg(self):
