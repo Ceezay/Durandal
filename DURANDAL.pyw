@@ -273,6 +273,35 @@ def _needs_setup():
 _ffmpeg_path = _ffmpeg_exe()   # resolves local bundle OR system PATH via shutil.which
 _setup_err   = None
 
+# Diagnostic: log ffmpeg resolution on startup
+try:
+    import datetime as _dt
+    _diag_path = TOOLS_DIR / "ffmpeg_diag.log"
+    with open(_diag_path, "a", encoding="utf-8") as _df:
+        _df.write(f"\n--- {_dt.datetime.now()} ---\n")
+        _df.write(f"frozen: {getattr(sys, 'frozen', False)}\n")
+        _df.write(f"_ffmpeg_path: {_ffmpeg_path}\n")
+        _df.write(f"os.environ PATH: {os.environ.get('PATH', '')}\n")
+        import shutil as _sh
+        _df.write(f"shutil.which ffmpeg: {_sh.which('ffmpeg')}\n")
+        if platform.system() == "Windows":
+            try:
+                import winreg as _wr
+                for _hive, _subkey in [
+                    (_wr.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Control\Session Manager\Environment"),
+                    (_wr.HKEY_CURRENT_USER, r"Environment"),
+                ]:
+                    try:
+                        with _wr.OpenKey(_hive, _subkey) as _k:
+                            _val, _ = _wr.QueryValueEx(_k, "PATH")
+                            _df.write(f"registry PATH ({_subkey}): {_val}\n")
+                    except FileNotFoundError:
+                        pass
+            except Exception as _re:
+                _df.write(f"registry read error: {_re}\n")
+except Exception:
+    pass
+
 def _ffmpeg_opts() -> dict:
     """Return {'ffmpeg_location': <path>} if ffmpeg was found, else {}."""
     if _ffmpeg_path:
@@ -1940,7 +1969,11 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                                   "1.5\u00d7", "2\u00d7", "3\u00d7", "4\u00d7"],
                           width=75, fg_color=X_ACCENT,
                           button_color=X_HOVER, button_hover_color=X_HOVER
-                          ).pack(side="left", padx=(6,0))
+                          ).pack(side="left", padx=(6,6))
+        self._apply_speed_btn = ctk.CTkButton(opt, text="Apply", width=60, height=28,
+                          fg_color=X_ACCENT, hover_color=X_HOVER,
+                          state="disabled", command=self._start)
+        self._apply_speed_btn.pack(side="left", padx=(0,0))
 
         # Trim section
         tf = ctk.CTkFrame(self, corner_radius=8); tf.pack(fill="x", padx=18, pady=(4,4))
@@ -2140,6 +2173,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
                     text_color="#4fc3f7")
                 self.fetch_btn.configure(state="normal", text="Load Info")
                 self.dl_btn.configure(state="normal")
+                self._apply_speed_btn.configure(state="normal")
                 self._set_filename_hint(title)
                 if duration:
                     self.trim_dur_lbl.configure(text=f"Duration: {dur_s}")
@@ -2175,6 +2209,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
         if not self._confirm_download("X → GIF"): return
         self._maybe_clear_log()
         self.dl_btn.configure(state="disabled", text="Converting…")
+        self._apply_speed_btn.configure(state="disabled")
         self.progress_bar.set(0)
         import threading
         threading.Thread(target=self._worker, args=(url, save, ts, te), daemon=True).start()
@@ -2246,6 +2281,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
             size_mb = out.stat().st_size / 1_048_576
             self.after(0, lambda: (
                 self.dl_btn.configure(state="normal", text="🔄  Convert to GIF"),
+                self._apply_speed_btn.configure(state="normal"),
                 self.progress_bar.set(1.0),
                 self.status_lbl.configure(text=f"✅  Done — {out.name}  ({size_mb:.1f} MB)"),
                 self._log(f"✔  Saved: {out}"),
@@ -2254,6 +2290,7 @@ class XtoGifSubTab(ctk.CTkFrame, _Mixin):
         except Exception as e:
             self.after(0, lambda err=str(e): (
                 self.dl_btn.configure(state="normal", text="🔄  Convert to GIF"),
+                self._apply_speed_btn.configure(state="normal"),
                 self.status_lbl.configure(text="❌  Error — see log"),
                 self._log(f"ERROR: {err}"),
                 messagebox.showerror("Conversion failed", err)
@@ -3153,7 +3190,7 @@ class DiscordDownloaderSubTab(ctk.CTkFrame, _Mixin):
                 raise ValueError("Could not parse Tenor GIF ID from URL")
             gif_id = m.group(1)
             # Tenor API v2 — requires your own key from tenor.com/developer
-            tenor_key = get_pref("tenor_api_key", "").strip()
+            tenor_key = (get_pref("tenor_api_key") or "").strip()
             if not tenor_key:
                 raise ValueError(
                     "No Tenor API key set.\n\n"
@@ -4430,7 +4467,7 @@ class SettingsPanel(ctk.CTkFrame):
                                           anchor="w", wraplength=400)
         self._upd_overall.pack(side="left", fill="x", expand=True)
         self._upd_btn = ctk.CTkButton(ubr, text="Check & Update All",
-                                       width=160, height=30,
+                                       width=200, height=30,
                                        font=ctk.CTkFont(size=12),
                                        command=self._check_updates_now)
         self._upd_btn.pack(side="right")
