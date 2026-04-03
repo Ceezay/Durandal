@@ -403,13 +403,30 @@ def get_folder_history(pref_key: str) -> list:
     return prefs.get(hist_key, [])
 
 def _get_installed_version(pkg):
-    # Try importlib.metadata first — works in both frozen and normal Python
+    # 1. importlib.metadata — works when .dist-info is available (normal install)
     try:
         from importlib.metadata import version as _imv
         return _imv(pkg)
     except Exception:
         pass
-    # Fall back to pip show (works when running as .pyw script)
+    # 2. Direct __version__ attribute — works in frozen builds where the
+    #    package code is bundled but .dist-info is not
+    _mod_map = {
+        "yt-dlp":        "yt_dlp",
+        "customtkinter": "customtkinter",
+        "Pillow":        "PIL",
+        "spotdl":        "spotdl",
+        "mutagen":       "mutagen",
+    }
+    try:
+        mod = __import__(_mod_map.get(pkg, pkg))
+        for attr in ("__version__", "version", "VERSION"):
+            v = getattr(mod, attr, None)
+            if isinstance(v, str) and v:
+                return v
+    except Exception:
+        pass
+    # 3. pip show — works when running as .pyw script
     try:
         r = subprocess.run([_python_exe(), "-m", "pip", "show", pkg],
                            capture_output=True, text=True, timeout=10,
