@@ -1,5 +1,5 @@
 <div align="center">
-<img src="icon.png" width="120"/>
+<img src="icon.png" width="250"/>
 
 # DURANDAL
 
