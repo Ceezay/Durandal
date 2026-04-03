@@ -766,6 +766,22 @@ class _Mixin:
             self.after(0, self._log, f"✔  {os.path.basename(fname)}")
             self.after(0, self._set_progress, 1.0)
 
+    def _postprocessor_hook(self, d):
+        """Show merge/encode progress so users know the file isn't ready yet."""
+        pp   = d.get("postprocessor", "")
+        status = d.get("status", "")
+        if status == "started":
+            if "Merger" in pp or "VideoConvertor" in pp:
+                self.after(0, self._set_status, "🔀  Merging video and audio — please wait…")
+            elif "ExtractAudio" in pp:
+                self.after(0, self._set_status, "🎵  Encoding audio — please wait…")
+            elif "FFmpeg" in pp:
+                self.after(0, self._set_status, "⚙️  Processing — please wait…")
+        elif status == "finished":
+            if "Merger" in pp or "VideoConvertor" in pp:
+                self.after(0, self._set_status, "✅  Merge complete — finalising file…")
+                self.after(0, self._log, "✔  Merge complete")
+
 # ─────────────────────────────────────────────────────────────────────────────
 #  YouTube Tab
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1213,6 +1229,7 @@ class YouTubeTab(ctk.CTkFrame, _Mixin):
             "windowsfilenames": True,
             "noplaylist":      not playlist,
             "progress_hooks":  [self._progress_hook],
+            "postprocessor_hooks": [self._postprocessor_hook],
             "quiet":           True,
             "no_warnings":     True,
             # Don't use ignoreerrors for single videos — we want to see failures.
@@ -1572,6 +1589,7 @@ class SpotifyTab(ctk.CTkFrame, _Mixin):
                     "preferredquality": self.bitrate_var.get().replace("k", ""),
                 }],
                 "progress_hooks":  [self._progress_hook],
+                "postprocessor_hooks": [self._postprocessor_hook],
             }
             try:
                 self.after(0, self._set_status, f"🔍  Searching YouTube Music for: {title[:60]}…")
@@ -1910,6 +1928,7 @@ class XDownloaderSubTab(ctk.CTkFrame, _Mixin):
             **_ffmpeg_opts(),
             "merge_output_format": "mp4",
             "progress_hooks":   [self._progress_hook],
+            "postprocessor_hooks": [self._postprocessor_hook],
             "quiet":            True,
             "no_warnings":      True,
             "postprocessors":   [{"key": "FFmpegVideoConvertor", "preferedformat": "mp4"}],
