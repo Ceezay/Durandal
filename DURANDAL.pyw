@@ -420,6 +420,11 @@ def _get_installed_version(pkg):
     }
     try:
         mod = __import__(_mod_map.get(pkg, pkg))
+        # Package-specific version paths
+        if pkg == "yt-dlp":
+            from yt_dlp.version import __version__ as _v; return _v
+        if pkg == "mutagen":
+            return getattr(mod, "version_string", None) or ".".join(str(x) for x in mod.version)
         for attr in ("__version__", "version", "VERSION"):
             v = getattr(mod, attr, None)
             if isinstance(v, str) and v:
