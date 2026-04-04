@@ -52,9 +52,10 @@ Download the latest release from the [Releases](https://github.com/Ceezay/Durand
 
 ## Getting Started
 
-1. Download the latest `DURANDAL.exe` from the [Releases](https://github.com/Ceezay/Durandal/releases) page
-2. Run it — no installation required
+1. Download the latest `DURANDAL.rar` from the [Releases](https://github.com/Ceezay/Durandal/releases) page
+2. Extract somewhere safe and run Durandal — no installation required
 3. On first launch it will set itself up automatically
+4. Desktop shortcut will be automatically generated upon first boot.
 
 That's it. No Python, no FFmpeg, no manual setup. Everything is handled on first run.
 
