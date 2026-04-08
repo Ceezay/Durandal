@@ -3,9 +3,9 @@
 
 # DURANDAL
 
-DURANDAL is a personal media downloader I made for myself for Windows with a dark GUI inspired by Bungie's *Marathon*. No sketchy sites, no bloat — just a clean tool built around the things that actually matter.
+DURANDAL is a Windows desktop media downloader. Paste a URL from YouTube, Spotify, Instagram, TikTok, X, Discord, or Steam and download it in seconds — no browser extensions, no accounts required for most content.
 
-Windows SmartScreen may flag this app as unrecognised. This is normal for unsigned software distributed outside the Microsoft Store. Click "More info" → "Run anyway" to launch it.
+Downloads are organised by platform into categories — MEDIA, SOCIAL, GAMING, and CREATIVE — each with format and quality controls. The home screen features a URL queue that auto-detects the platform, a recent downloads list, and per-platform download stats.
 
 > *"I am DURANDAL."*
 
@@ -15,81 +15,67 @@ Download the latest release from the [Releases](https://github.com/Ceezay/Durand
 
 ## Features
 
-### YouTube
-- Download videos as **MP4** or audio as **MP3**
-- Quality selection up to 4K, FPS options (Any / 60 / 30)
-- Full playlist support
-- Clip trimming with start/end time controls
+### Home Screen
+- **URL Queue** — paste any supported URL and DURANDAL detects the platform automatically, downloads to the correct folder
+- **Recent Downloads** — quick access to your last 15 downloads with open-folder button
+- **Stats** — total and per-platform download counters
 
-### Spotify
-- Download tracks as **MP3** via YouTube Music matching
-- Metadata and album artwork embedded automatically
-- Adjustable bitrate
+### MEDIA
+- **YouTube** — MP4 or MP3, quality up to 4K, FPS options, playlist support, clip trimming
+- **Spotify** — MP3 via YouTube Music matching, embedded metadata and artwork, adjustable bitrate
+- **GIF → MP4** — convert any local GIF to MP4 with scale and FPS options
 
-### X (Twitter)
-- Download videos in quality tiers
-- Grab native X GIFs directly
-- Convert X videos to animated GIF with speed, FPS, width, and colour controls
+### SOCIAL
+- **Instagram** — download posts and reels (session cookie support for private content)
+- **TikTok** — MP4 or MP3 with quality options
+- **X (Twitter)** — video downloads, native GIF grab, X to GIF converter
+- **Discord & Tenor** — download CDN attachments, Tenor GIF support
 
-### Art Grab
-- Pull album and track artwork from YouTube or Spotify URLs
-- Export at full resolution
+### GAMING
+- **Steam** — download profile avatars (static and animated), auto-detects animated WebM
 
-### GIF → MP4
-- Convert any local GIF file to MP4
-- Scale and FPS options
-
-### Discord & Tenor
-- Download attachments directly from Discord CDN links
-- Tenor GIF support (requires free API key from [tenor.com/developer](https://tenor.com/developer))
-
-### Avatar Cropper
-- Crop images or GIFs to standard avatar sizes (128 / 256 / 512 / 1024 px)
-- Live canvas preview with draggable crop overlay
-- Quality filters and GIF playback
+### CREATIVE
+- **Art Grab** — pull full-resolution artwork from YouTube or Spotify URLs
+- **Avatar Cropper** — crop images or GIFs to standard avatar sizes with live preview
 
 ---
 
 ## Getting Started
 
-1. Download the latest `DURANDAL.rar` from the [Releases](https://github.com/Ceezay/Durandal/releases) page
-2. Extract somewhere safe and run Durandal — no installation required
-3. On first launch it will set itself up automatically
-4. Desktop shortcut will be automatically generated upon first boot.
+1. Download the latest release from the [Releases](https://github.com/Ceezay/Durandal/releases) page
+2. Extract the folder anywhere — it's fully portable
+3. Run `DURANDAL.exe` — no installation required
 
-That's it. No Python, no FFmpeg, no manual setup. Everything is handled on first run.
+On first launch it will set itself up automatically. No Python, no FFmpeg, no manual setup.
+
+---
+
+## Portable
+
+DURANDAL is fully portable. The entire folder can be placed anywhere — your Desktop, a USB drive, a secondary drive. Keep all files in the folder together and run the exe from there.
+
+App data (settings, cookies, history) is stored separately in `%APPDATA%\DURANDAL` and is not affected by moving the app folder.
 
 ---
 
 ## Requirements
 
 - Windows 10 or 11
-- An internet connection on first launch (for setup and downloading)
-
----
-
-## First Launch
-
-On first run DURANDAL will:
-- Install all required Python libraries automatically
-- Download FFmpeg if not already on your system
-- Create a desktop shortcut
-
-All app data is stored in `%APPDATA%\DURANDAL`.
+- Internet connection on first launch (for setup)
 
 ---
 
 ## Updates
 
-DURANDAL checks for new releases automatically on every launch. When a new version is available you will see a popup with a link to the release page.
+DURANDAL checks for new releases automatically on every launch. A popup will appear when a new version is available.
 
-You can also manually check via **Settings → Updates → Check for Update**.
+Manual check: **Settings → Updates → Check for Update**
 
 ---
 
 ## Feedback & Suggestions
 
-Found a bug? Got a feature request? Head over to [Discussions](https://github.com/Ceezay/Durandal/discussions) and drop it there.
+Found a bug? Got a feature request? Head over to [Discussions](https://github.com/Ceezay/Durandal/discussions).
 
 ---
 
