@@ -32,7 +32,7 @@ Download the latest release from the [Releases](https://github.com/Ceezay/Durand
 - **Discord & Tenor** — download CDN attachments, Tenor GIF support
 
 ### GAMING
-- **Steam** — download profile avatars (static and animated), auto-detects animated WebM
+- **Steam** — download profile avatars (static)
 
 ### CREATIVE
 - **Art Grab** — pull full-resolution artwork from YouTube or Spotify URLs
